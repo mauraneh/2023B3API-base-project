@@ -4,9 +4,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProjectUserModule } from './project-user/project-user.module';
 import { ProjectModule } from './project/project.module';
 import { EventModule } from './event/event.module';
-import { UserModule } from './user/user.module';
-import { User } from './user/entities/user.entity';
-import { AuthModule } from './auth/auth.module';
+import { UserModule } from './users/users.module';
+import { User } from './users/entities/user.entity';
 
 
 @Module({
@@ -29,10 +28,6 @@ import { AuthModule } from './auth/auth.module';
       inject: [ConfigService],
     }),
     UserModule,
-    ProjectModule,
-    EventModule,
-    ProjectUserModule,
-    AuthModule,
   ],
   controllers: [],
   providers: [],
