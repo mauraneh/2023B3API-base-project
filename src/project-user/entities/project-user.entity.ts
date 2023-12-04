@@ -1,35 +1,29 @@
-// import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-// import { Project } from '../../project/entities/project.entity';
-// import { User } from '../../user/entities/user.entity';
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Project } from '../../project/entities/project.entity';
+import { User } from '../../users/entities/user.entity';
 
-// @Entity()
-// export class ProjectUser {
-//     isWorkingDay(date: Date): unknown {
-//         throw new Error('Method not implemented.');
-//     }
-//     @PrimaryGeneratedColumn()
-//     id!: string;
+@Entity()
+export class ProjectUser {
+    @PrimaryGeneratedColumn('uuid')
+    id: string;
 
-//     @Column()
-//     startDate!: Date;
+    @Column({type: 'date'})
+    startDate: Date;
 
-//     @Column()
-//     endDate!: Date;
+    @Column({type: 'date'})
+    endDate: Date;
 
-//     @ManyToOne(() => Project, (project) => project.users)
-//     @JoinColumn({ name: 'projectId' })
-//     project!: Project;
+    @Column()
+    userId: string;
 
-//     @ManyToOne(() => User, (user) => user.projects)
-//     @JoinColumn({ name: 'userId' })
-//     user!: User;
-//     projectId: string;
-//     userId: string;
+    @Column()
+    projectId: string;
 
-//     constructor(startDate: Date, endDate: Date, projectId: string, userId: string) {
-//     this.startDate = startDate;
-//     this.endDate = endDate;
-//     this.projectId = projectId;
-//     this.userId = userId;
-//     }
-// }
+    @ManyToOne(() => User, (user) => user.id)
+    @JoinColumn({ name: 'userId' })
+    user: User;
+
+    @ManyToOne(() => Project, (project) => project.id)
+    @JoinColumn({ name: 'projectId' })
+    project: Project;
+}

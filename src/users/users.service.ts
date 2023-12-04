@@ -1,11 +1,12 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { LogInTo } from './dto/login.dto'
 import { JwtService } from '@nestjs/jwt';
+import { isUUID } from './dto/create-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -28,48 +29,49 @@ export class UsersService {
   }
 
   // LOGIN
-  async login(logInTo: LogInTo): Promise<{ token: string }> {
-    const {email, password} = logInTo;
-
-    const user = await this.usersRepository.findOne({ 
-      where: {email},
-    })
-
+  async login(logInTo: LogInTo) {
+    
+    const option: FindOneOptions<User> = {where: {email: logInTo.email}};
+    const user = await this.usersRepository.findOne(option);
     if (!user){
       throw new UnauthorizedException('Email ou mot de passe invalide')
     }
 
-    const isPasswordMatched = await bcrypt.compare(password, user.password);
+    const isPasswordMatched = await bcrypt.compare(logInTo.password, user.password);
 
     if (!isPasswordMatched){
       throw new UnauthorizedException('Email ou mot de passe invalide')
-    }
-    const token = this.jwtService.sign( { id: user.id })
+    } 
 
-    return { token };
+    const payload = { sub: user.id, mail: user.email, role: user.role};
+  return { 
+      access_token: await this.jwtService.signAsync(payload),
+  };
   }
 
+  // Retourne un utilisateur
+  async getUser(id: string) {
+  if (!isUUID(id)){
+    throw new BadRequestException('L\'id n\'est pas un UUID');
+  }
+
+  const option: FindOneOptions<User> = {where: {id: id}};
+  const user = await this.usersRepository.findOne(option);
+
+    if (!user) {
+      throw new NotFoundException(`L'utilisateur d'id ${id} n'existe pas`);
+    }
+    delete user.password;
+    return user;
+  }
+    
   // Retourne tous les utilisateurs
   async getAllUsers() {
-    const users = this.usersRepository.find();
+    const users = await this.usersRepository.find();
+    for (const user of users) {
+      delete user.password;
+    }
     return users;
   }
 
-  // Retourne un user par son id
-  async getUserById(id: string) {
-  const user = await this.usersRepository.findOne({
-    where: { 
-      id: id,
-    }
-  });
-  if (user){
-    return user;
-  }
-  throw new UnauthorizedException('User introuvable');
-  }
-
-  // Supprimer un user
-  remove(id: number) {
-    return `This action removes a #${id} user`;
-  }
 }
