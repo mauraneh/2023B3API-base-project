@@ -9,12 +9,13 @@ import { User } from '../users/entities/user.entity';
 import Project from './entities/project.entity';
 import { UserModule } from '../users/users.module';
 import { ProjectUser } from '../project-user/entities/project-user.entity';
+import { ProjectUserController } from '../project-user/project-user.controller';
 
 @Module({
   imports: [ TypeOrmModule.forFeature([Project, User, ProjectUser]), 
-  UserModule
+  UserModule,
 ],
-  controllers: [ProjectController, UsersController],
+  controllers: [ProjectController, UsersController, ProjectUserController],
   providers: [ProjectService, UsersService, ProjectUserService],
   exports: [ProjectService, UsersService, ProjectUserService],
 })

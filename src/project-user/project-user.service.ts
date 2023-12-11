@@ -1,24 +1,40 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateProjectUserDto } from './dto/create-project-user.dto';
-import { UpdateProjectUserDto } from './dto/update-project-user.dto';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { ProjectUser } from './entities/project-user.entity';
-import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
+import Project from '../project/entities/project.entity';
 
 @Injectable()
 export class ProjectUserService {
   constructor(
     @InjectRepository(ProjectUser)
-    private readonly projectUserRepository: Repository<ProjectUser>,
-    private readonly jwtService: JwtService,
-  ) { 
+    private readonly projectUserRepository: Repository<ProjectUser> ) { 
   }
 
-  async create(createProjectUserDto: CreateProjectUserDto) {
-    const newProjectUser = this.projectUserRepository.create(createProjectUserDto);
-    const insertedProjectUser = await this.projectUserRepository.save(newProjectUser);
-    return {insertedProjectUser};
+  async create(
+    createProjectUserDto: CreateProjectUserDto,
+  ): Promise<ProjectUser> {
+    try {
+      const user =
+        this.projectUserRepository.create(createProjectUserDto);
+      const userProject =
+        await this.projectUserRepository.save(user);
+      if (userProject == null) {
+        throw new ConflictException("Le user ou le projet n'a pas été trouvé");
+      }
+      const options: FindManyOptions<ProjectUser> = {
+        where: { id: userProject.id },
+        relations: ['user', 'project', 'project.referringEmployee'],
+      };
+      const ProjectUser =
+        await this.projectUserRepository.findOne(options);
+      delete ProjectUser.project.referringEmployee.password;
+      delete ProjectUser.user.password;
+      return ProjectUser;
+    } catch (error) {
+      throw new NotFoundException("Not found");
+    }
   }
 
 async findProjectByEmployeeId(id: string) {
@@ -42,16 +58,48 @@ async findProjectByEmployeeId(id: string) {
     return response;
   }
 
-
-  findOne(id: number) {
-    return `This action returns a #${id} projectUser`;
+  // Find projects linked to employee
+  async userLinkedProject(
+    idUser: string,
+    idProject: string,
+  ): Promise<boolean> {
+    const option: FindManyOptions<ProjectUser> = {
+      where: { userId: idUser, projectId: idProject },
+    };
+    const projects = await this.projectUserRepository.findOne(option);
+    if (projects == null) {
+      return false;
+    }
+    return true;
   }
 
-  update(id: number, updateProjectUserDto: UpdateProjectUserDto) {
-    return `This action updates a #${id} projectUser`;
+  // Find one project by employee
+  async findOne(id: string): Promise<ProjectUser> {
+    const options: FindManyOptions<ProjectUser> = {
+      where: { id: id },
+    };
+    const usersProject = await this.projectUserRepository.findOne(options);
+    return usersProject;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} projectUser`;
+  // Find all projects by employee
+  async findAll(): Promise<Project[]> {
+    const options: FindManyOptions<ProjectUser> = {
+      relations: ['user', 'project'],
+    };
+    const projectUser = await this.projectUserRepository.find(options);
+    const projects = projectUser.map((projectUser) => projectUser.project);
+    return projects;
+  }
+
+  // Find one project by employee
+  async findOneProject(id: string): Promise<Project[]> {
+    const options: FindManyOptions<ProjectUser> = {
+      where: { id: id },
+      relations: ['user', 'project'],
+    };
+    const projectUser = await this.projectUserRepository.find(options);
+    const projects = projectUser.map((projectUser) => projectUser.project);
+    return projects;
   }
 }

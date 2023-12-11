@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, NotFoundException, UsePipes, ValidationPipe, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Req, UsePipes, ValidationPipe, UnauthorizedException, ForbiddenException, NotFoundException, Param } from '@nestjs/common';
 import { ProjectService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { ProjectUserService } from '../project-user/project-user.service';
@@ -39,17 +39,73 @@ async create(@Body() createProjectDto: CreateProjectDto, @Req() req) {
     }
   }
 
+  // Find all projects
   @UseGuards(AuthGuard)
   @Get()
-  async findAll(@Req() req) {
-    // si t'es admin ou project manager tu peux voir tous les projets
-    if (req.user.role === 'Admin' || req.user.role === 'ProjectManager'){
-      return await this.projectService.findAll();
-    } else {
-      // si t'es pas admin ou project manager tu peux pas voir les projets
-      const projects = this.projectUserService.findProjectByEmployeeId(req.user.id);
-      return projects;
+  async findAllProjects(@Req() req) {
+    try {
+      // si t'es admin ou project manager tu peux voir tous les projets
+      if (req.user.role === 'Admin' || req.user.role === 'ProjectManager'){
+        return await this.projectService.findAll(req);
+      } else if (req.user.role === 'Employee') {
+        // si t'es un employé, tu peux voir seulement les projets auxquels tu as accès
+        const employeeProjects = await this.projectUserService.findProjectByEmployeeId(req.user.id);
+        return employeeProjects;
+      } else {
+        throw new ForbiddenException('Access Forbidden');
+      }
+    } catch {
+      throw new NotFoundException('Not found');
     }
   }
 
+  // Find all projects by employee
+  @UseGuards(AuthGuard)
+  @Get(':id')
+  async getProject(@Param('id') projectId: string, @Req() req) {
+    const p = await this.projectService.findProjectsById(projectId);
+    if (p == undefined) {
+      throw new NotFoundException('Resource not found');
+    }
+
+    if (req.user.role === 'Admin' || req.user.role === 'ProjectManager') {
+      return p;
+    }
+    if (req.user.role === 'Employee') {
+      const result = await this.projectUserService.userLinkedProject(
+        req.user.sub,
+        projectId,
+      );
+      if (result === true) {
+        return p;
+      } else {
+        throw new ForbiddenException('Access Forbidden');
+      }
+    }
+  }
+
+  // Find all projects by id
+  @UseGuards(AuthGuard)
+  @Get(':id')
+  async getOneProject(@Param('id') projectId: string, @Req() req) {
+    const oneProject = await this.projectService.findProjectsById(projectId);
+    if (oneProject == undefined) {
+      throw new NotFoundException('Resource not found');
+    }
+
+    if (req.user.role === 'Admin' || req.user.role === 'ProjectManager') {
+      return oneProject;
+    }
+    if (req.user.role === 'Employee') {
+      const result = await this.projectUserService.userLinkedProject(
+        req.user.sub,
+        projectId,
+      );
+      if (result === true) {
+        return oneProject;
+      } else {
+        throw new ForbiddenException('Access Forbidden');
+      }
+    }
+  }
 }

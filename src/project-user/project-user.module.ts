@@ -14,7 +14,8 @@ import { ProjectService } from '../project/projects.service';
 @Module({
   imports: [ 
     TypeOrmModule.forFeature([ProjectUser, Project, User]),
-    UserModule],
+    UserModule
+  ],
   controllers: [
     ProjectUserController, UsersController, ProjectController],
   providers: [
