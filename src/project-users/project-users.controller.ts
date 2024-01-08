@@ -1,7 +1,8 @@
 import { Controller, Post, Get, Param, Body, UseGuards, Req } from '@nestjs/common';
 import { ProjectUsersService } from './project-users.service';
-import { CreateProjectUserDto } from './dto/create-project-users.dto';
+import { CreateProjectUsersDto } from './dto/create-project-users.dto';
 import { AuthGuard } from '../auth/auth.guard';
+
 
 @Controller('project-users')
 export class ProjectUsersController {
@@ -9,8 +10,8 @@ export class ProjectUsersController {
 
   @Post()
   @UseGuards(AuthGuard)
-  async create(@Body() createProjectUserDto: CreateProjectUserDto) {
-    return this.projectUsersService.createProjectUser(createProjectUserDto);
+  async create(@Body() createProjectUsersDto: CreateProjectUsersDto, @Req() req) {
+    return this.projectUsersService.createProjectUsers(createProjectUsersDto, req.user.role);
   }
 
   @Get(':id')
