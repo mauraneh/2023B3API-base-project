@@ -1,5 +1,5 @@
 import { PartialType } from '@nestjs/swagger';
-import { CreateProjectDto } from './create-project.dto';
+import { CreateProjectDto } from './create-projects.dto';
 import { IsNotEmpty, MinLength } from 'class-validator';
 
 export class UpdateProjectDto {

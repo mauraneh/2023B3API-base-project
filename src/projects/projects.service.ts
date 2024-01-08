@@ -1,26 +1,27 @@
-import { Injectable, Req } from '@nestjs/common';
-import { CreateProjectDto } from './dto/create-project.dto';
-import { UpdateProjectDto } from './dto/update-project.dto';
+import { Body, Injectable, Req, UnauthorizedException } from '@nestjs/common';
+import { CreateProjectDto } from './dto/create-projects.dto';
+import { UpdateProjectDto } from './dto/update-projects.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import Project from './entities/project.entity';
+import Project from './entities/projects.entity';
 import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
-export class ProjectService {
+export class ProjectsService {
   constructor(
     @InjectRepository(Project)
     private readonly projectRepository: Repository<Project>,
   ) {}
 
  // Create a new project
-  async create(createProjectDto: CreateProjectDto) {
-    const newProject = this.projectRepository.create(createProjectDto);
-    const insertedProject = await this.projectRepository.save(newProject);
-    return {insertedProject};
-  }
-
+async create(createProjectDto: CreateProjectDto) {
+  const newProject = this.projectRepository.create(createProjectDto);
+  const insertedProject = await this.projectRepository.save(newProject);
+  return {insertedProject};
+}
+  
 // Find a project by name
-async findProject(name: string) {
+async findOne(name: string) {
   const option: FindOneOptions = { where: { name } };
   const project: UpdateProjectDto = await this.projectRepository.findOne(option);
   return project;

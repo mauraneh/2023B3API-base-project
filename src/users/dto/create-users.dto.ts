@@ -1,10 +1,10 @@
 import { Entity } from 'typeorm';
-import { UserRole } from '../entities/user.entity';
+import { UserRole } from '../entities/users.entity';
 import { IsEmail, IsEnum, IsNotEmpty, IsOptional, MinLength } from 'class-validator';
 
 
 @Entity()
-export class CreateUserDto {
+export class CreateUsersDto {
     @MinLength(3)
     @IsNotEmpty()
     public username!: string;
