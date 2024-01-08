@@ -1,9 +1,9 @@
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { Project } from '../../project/entities/project.entity';
-import { User } from '../../users/entities/user.entity';
+import { Projects } from '../../projects/entities/projects.entity';
+import { Users } from '../../users/entities/users.entity';
 
 @Entity()
-export class ProjectUser {
+export class ProjectUsers {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
@@ -19,11 +19,11 @@ export class ProjectUser {
     @Column()
     projectId: string;
 
-    @ManyToOne(() => User, (user) => user.id)
+    @ManyToOne(() => Users, (user) => user.id)
     @JoinColumn({ name: 'userId' })
-    user: User;
+    user: Users;
 
-    @ManyToOne(() => Project, (project) => project.id)
+    @ManyToOne(() => Projects, (project) => project.id)
     @JoinColumn({ name: 'projectId' })
-    project: Project;
+    project: Projects;
 }

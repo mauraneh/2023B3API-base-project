@@ -1,17 +1,19 @@
 import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { UserModule } from './users/users.module';
-import { User } from './users/entities/user.entity';
+import { UsersModule } from './users/users.module';
+import { Users } from './users/entities/users.entity';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './auth/jwt.stategy';
 import { RequestLoggerMiddleware } from './auth/request.logger.middleware';
 import { jwtConstants } from './auth/constant';
-import Project from './project/entities/project.entity';
-import { ProjectModule } from './project/projects.module';
-import { ProjectUser } from './project-user/entities/project-user.entity';
-import { ProjectUserModule } from './project-user/project-user.module';
+import Projects from './projects/entities/projects.entity';
+import { ProjectsModule } from './projects/projects.module';
+import { ProjectUsers } from './project-users/entities/project-users.entity';
+import { ProjectUsersModule } from './project-users/project-users.module';
+import { EventsModule } from './events/events.module';
+import { Events } from './events/entities/events.entity';
 
 
 @Module({
@@ -27,9 +29,10 @@ import { ProjectUserModule } from './project-user/project-user.module';
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_NAME'),
         entities: [
-          User, 
-          Project,
-          ProjectUser,
+          Users, 
+          Projects,
+          ProjectUsers,
+          Events,
         ],
         synchronize: true,
       }),
@@ -40,9 +43,10 @@ import { ProjectUserModule } from './project-user/project-user.module';
       secret: jwtConstants.secret,
       signOptions: { expiresIn: '60s' },
     }),
-    UserModule,
-    ProjectModule,
-    ProjectUserModule,
+    UsersModule,
+    ProjectsModule,
+    ProjectUsersModule,
+    EventsModule,
   ],
   controllers: [],
   providers: [JwtStrategy],

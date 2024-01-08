@@ -1,27 +1,27 @@
 import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
+import { CreateUsersDto } from './dto/create-users.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { User } from './entities/user.entity';
+import { Users } from './entities/users.entity';
 import { FindOneOptions, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { LogInTo } from './dto/login.dto'
 import { JwtService } from '@nestjs/jwt';
-import { isUUID } from './dto/create-user.dto';
+import { isUUID } from './dto/create-users.dto';
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectRepository(User)
-    private usersRepository: Repository<User>,
+    @InjectRepository(Users)
+    private usersRepository: Repository<Users>,
     private jwtService: JwtService,
   ) {}
 
   // SignIn
-  async create(createUserDto: CreateUserDto) {
+  async create(createUsersDto: CreateUsersDto) {
     const saltOrRounds = 10;
     const newUser = this.usersRepository.create({
-      ...createUserDto,
-      password: await bcrypt.hash(createUserDto.password, saltOrRounds),
+      ...createUsersDto,
+      password: await bcrypt.hash(createUsersDto.password, saltOrRounds),
     })
     const insertedUser = await this.usersRepository.save(newUser)
     delete insertedUser.password
@@ -31,7 +31,7 @@ export class UsersService {
   // LOGIN
   async login(logInTo: LogInTo) {
     
-    const option: FindOneOptions<User> = {where: {email: logInTo.email}};
+    const option: FindOneOptions<Users> = {where: {email: logInTo.email}};
     const user = await this.usersRepository.findOne(option);
     if (!user){
       throw new UnauthorizedException('Email ou mot de passe invalide')
@@ -55,7 +55,7 @@ export class UsersService {
     throw new BadRequestException('L\'id n\'est pas un UUID');
   }
 
-  const option: FindOneOptions<User> = {where: {id: id}};
+  const option: FindOneOptions<Users> = {where: {id: id}};
   const user = await this.usersRepository.findOne(option);
 
     if (!user) {
@@ -72,6 +72,25 @@ export class UsersService {
       delete user.password;
     }
     return users;
+  }
+
+  async returnUser(id: string) {
+    if (!isUUID(id)) {
+      throw new BadRequestException('Invalid UUID format for user ID');
+    }
+
+    // Find the user by ID
+    const user = await this.usersRepository.findOne({
+      where: { id: id },
+    });
+
+    // Throw an exception if the user is not found
+    if (user === null) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    delete user.password; // Do not return the password in the response
+    return user;
   }
 
 }
