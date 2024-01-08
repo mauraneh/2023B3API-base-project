@@ -1,10 +1,9 @@
 import {
   Injectable,
   NotFoundException,
-  BadRequestException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Between, Repository } from 'typeorm';
+import { Between, FindManyOptions, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Events } from './entities/events.entity';
 import { CreateEventsDto } from './dto/create-events.dto';
@@ -15,33 +14,72 @@ import { EventStatus, EventType } from './enums';
 export class EventsService {
   constructor(
     @InjectRepository(Events)
-    private repository: Repository<Events>,
+    private eventsRepository: Repository<Events>,
   ) {}
 
-  async create(userId: string, dto: CreateEventsDto): Promise<Events> {
-    const existingEvent = await this.repository.findOne({
-      where: { userId: userId, date: dto.date },
+  async createNewEvent(
+    userId: string,
+    eventDetails: CreateEventsDto,
+  ): Promise<Events | null> {
+    // Rule: No two events, regardless of their status, can occur on the same day
+    const searchOptions: FindManyOptions<Events> = {
+      where: {
+        userId: userId,
+        date: eventDetails.date,
+      },
+      relations: ['user'],
+    };
+    const existingEventOnSameDay = await this.eventsRepository.findOne(searchOptions);
+  
+    if (existingEventOnSameDay !== null) {
+      throw new UnauthorizedException(
+        'An event already exists for this user on the same day',
+      );
+    }
+    // Rule: Remote work cannot exceed two days per week
+    if (eventDetails.eventType === 'RemoteWork') {
+      const selectedDay = dayjs(eventDetails.date);
+      // Get the Monday of the corresponding week
+      const weekStartDay = selectedDay.startOf('week').subtract(1, 'day');
+      const monday = weekStartDay.toDate();
+      // Get the Friday of the week by adding 6 days to the Monday
+      const weekEndDay = weekStartDay.add(6, 'day');
+      const friday = weekEndDay.toDate();
+      const countOptions: FindManyOptions<Events> = {
+        where: {
+          userId: userId,
+          eventType: 'RemoteWork',
+          date: Between(monday, friday),
+        },
+      };
+      const remoteWorkCountThisWeek = await this.eventsRepository.count(countOptions);
+      if (remoteWorkCountThisWeek >= 2) {
+        throw new UnauthorizedException(
+          'You cannot have more than two remote work events per week',
+        );
+      }
+    }
+    // Rule: Remote work events do not require approval from a supervisor
+    if (eventDetails.eventType === 'RemoteWork') {
+      eventDetails.eventStatus == 'Accepted';
+    }
+    // Rule: If an Employee tries to create a Paid Leave event, its status is set to Pending
+    if (eventDetails.eventType === 'PaidLeave') {
+      eventDetails.eventStatus == 'Pending';
+    }
+    // Create the event
+    const newEvent = this.eventsRepository.create({
+      ...eventDetails,
+      userId: userId,
     });
-
-    if (existingEvent) {
-      throw new UnauthorizedException('Event already exists on this day');
-    }
-
-    if (dto.eventType === EventType.RemoteWork) {
-      await this.validateRemoteWorkLimit(userId, dto.date);
-      dto.eventStatus = EventStatus.Accepted;
-    }
-
-    if (dto.eventType === EventType.PaidLeave && !dto.eventStatus) {
-      dto.eventStatus = EventStatus.Pending;
-    }
-
-    const newEvent = this.repository.create({ ...dto, userId: userId });
-    return await this.repository.save(newEvent);
+    // Save the event in the database
+    const savedEvent = await this.eventsRepository.save(newEvent);
+    return savedEvent;
   }
+  
 
   async findById(eventId: string): Promise<Events> {
-    const event = await this.repository.findOne({ where: { id: eventId } });
+    const event = await this.eventsRepository.findOne({ where: { id: eventId } });
     if (!event) {
       throw new NotFoundException('Event not found');
     }
@@ -49,7 +87,7 @@ export class EventsService {
   }
 
   async findAll(): Promise<Events[]> {
-    return await this.repository.find();
+    return await this.eventsRepository.find();
   }
 
   async approve(eventId: string): Promise<void> {
@@ -64,7 +102,7 @@ export class EventsService {
     const startOfMonth = dayjs().month(month - 1).startOf('month').toDate();
     const endOfMonth = dayjs().month(month - 1).endOf('month').toDate();
 
-    return await this.repository.count({
+    return await this.eventsRepository.count({
       where: {
         userId: userId,
         date: Between(startOfMonth, endOfMonth),
@@ -74,11 +112,11 @@ export class EventsService {
   }
 
   // Private helper methods
-  private async validateRemoteWorkLimit(userId: string, date: Date): Promise<void> {
+  async validateRemoteWorkLimit(userId: string, date: Date): Promise<void> {
     const weekStart = dayjs(date).startOf('week').toDate();
     const weekEnd = dayjs(date).endOf('week').toDate();
 
-    const count = await this.repository.count({
+    const count = await this.eventsRepository.count({
       where: {
         userId: userId,
         eventType: EventType.RemoteWork,
@@ -87,11 +125,12 @@ export class EventsService {
     });
 
     if (count >= 2) {
-      throw new BadRequestException('Remote work limit reached for the week');
+      throw new UnauthorizedException('Remote work limit reached for the week');
     }
   }
 
-  private async updateEventStatus(eventId: string, status: EventStatus): Promise<void> {
-    await this.repository.update(eventId, { eventStatus: status });
+  async updateEventStatus(eventId: string, status: EventStatus): Promise<void> {
+    await this.eventsRepository.update(eventId, { eventStatus: status });
   }
+  
 }

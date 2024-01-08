@@ -1,6 +1,6 @@
 import { IsNotEmpty } from 'class-validator';
  
-export class CreateProjectUserDto {
+export class CreateProjectUsersDto {
   @IsNotEmpty()
   startDate: Date;
  
