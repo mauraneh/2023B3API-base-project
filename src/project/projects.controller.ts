@@ -42,7 +42,7 @@ async create(@Body() createProjectDto: CreateProjectDto, @Req() req) {
   // Find all projects
   @UseGuards(AuthGuard)
   @Get()
-  async findAllProjects(@Req() req) {
+  async getAllProjects(@Req() req) {
     try {
       // si t'es admin ou project manager tu peux voir tous les projets
       if (req.user.role === 'Admin' || req.user.role === 'ProjectManager'){
@@ -56,31 +56,6 @@ async create(@Body() createProjectDto: CreateProjectDto, @Req() req) {
       }
     } catch {
       throw new NotFoundException('Not found');
-    }
-  }
-
-  // Find all projects by employee
-  @UseGuards(AuthGuard)
-  @Get(':id')
-  async getProject(@Param('id') projectId: string, @Req() req) {
-    const p = await this.projectService.findProjectsById(projectId);
-    if (p == undefined) {
-      throw new NotFoundException('Resource not found');
-    }
-
-    if (req.user.role === 'Admin' || req.user.role === 'ProjectManager') {
-      return p;
-    }
-    if (req.user.role === 'Employee') {
-      const result = await this.projectUserService.userLinkedProject(
-        req.user.sub,
-        projectId,
-      );
-      if (result === true) {
-        return p;
-      } else {
-        throw new ForbiddenException('Access Forbidden');
-      }
     }
   }
 

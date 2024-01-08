@@ -26,6 +26,14 @@ async findProject(name: string) {
   return project;
   }
 
+  // 
+  async getProject(name: string) {
+    const project: UpdateProjectDto = await this.projectRepository.findOne({
+      where: { name: name },
+    });
+    return { project };
+  }
+
 // Find all projects
   async findAll(@Req() req) {
     const option: FindOneOptions<Project> = { relations: ['referringEmployee'] };
