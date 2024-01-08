@@ -81,9 +81,8 @@ async findProjectsForEmployee(createDto: CreateProjectUsersDto) {
       return assignment;
     }
   }
-  return new ConflictException('User is not assigned to a project during this time period'); // This seems misplaced
+  return null;
 }
-
 
   // Finds a specific ProjectUser by ID
   async findProjectUserById(projUserId: string): Promise<ProjectUsers> {
