@@ -10,6 +10,7 @@ import {
   Param,
   HttpException,
   HttpStatus,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventsDto } from './dto/create-events.dto';
@@ -28,7 +29,7 @@ export class EventsController {
   @UsePipes(new ValidationPipe())
   create(@Body() dto: CreateEventsDto, @Req() req) {
     const userId = req.user.sub;
-    return this.eventsService.create(userId, dto);
+    return this.eventsService.createNewEvent(userId, dto);
   }
 
   @Get(':id')
@@ -46,6 +47,7 @@ export class EventsController {
   @Post('/:id/validate')
   @UseGuards(AuthGuard)
   async validate(@Param('id') eventId: string, @Req() req) {
+    
     this.checkUserRole(req.user.role, eventId);
     return this.eventsService.approve(eventId);
   }
@@ -59,7 +61,7 @@ export class EventsController {
 
   private async checkUserRole(role: string, eventId: string) {
     if (role === 'Employee') {
-      throw new HttpException('Unauthorized access', HttpStatus.UNAUTHORIZED);
+      throw new UnauthorizedException('Unauthorized access');
     }
 
     const event = await this.eventsService.findById(eventId);

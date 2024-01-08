@@ -18,57 +18,68 @@ export class ProjectUsersService {
   ) {}
 
   // Creates a new ProjectUser entry
-  async createProjectUser(
-    createDto: CreateProjectUserDto,
-  ): Promise<ProjectUsers> {
+  async createProjectUser(createDto: CreateProjectUserDto): Promise<ProjectUsers> {
     try {
-      // Create a new entity instance with DTO data
+      // Check for existing assignments that overlap with the provided date range
+      const existingAssignments = await this.projectUserRepo.find({
+        where: {
+          userId: createDto.userId,
+          startDate: LessThanOrEqual(createDto.endDate),
+          endDate: MoreThanOrEqual(createDto.startDate),
+        },
+      });
+  
+      // If an overlapping assignment exists, throw a ConflictException
+      if (existingAssignments.length > 0) {
+        throw new ConflictException('User is already assigned to a project during this date range');
+      }
+  
+      // Proceed with creating a new project-user entry
       const newProjUser = this.projectUserRepo.create(createDto);
-
-      // Save the new entity in the database
       const savedProjUser = await this.projectUserRepo.save(newProjUser);
-
-      // Throw an error if saving fails
+  
       if (!savedProjUser) {
         throw new NotFoundException("Project or User not found");
       }
-
-      // Find the complete ProjectUser with relations
-      const projUserOptions: FindManyOptions<ProjectUsers> = {
+  
+      // Fetch the complete ProjectUser with relations
+      const completeProjUser = await this.projectUserRepo.findOne({
         where: { id: savedProjUser.id },
         relations: ['user', 'project', 'project.referringEmployee'],
-      };
-      const completeProjUser = await this.projectUserRepo.findOne(projUserOptions);
-
-      // Remove sensitive data before returning
+      });
+  
+      // Remove sensitive data
       delete completeProjUser.project.referringEmployee.password;
       delete completeProjUser.user.password;
+  
       return completeProjUser;
     } catch (error) {
-      throw new NotFoundException("Project or User not found");
+      throw error;
     }
   }
+  
 
-  // Finds projects assigned to a specific employee
-  async findProjectsForEmployee(createDto: CreateProjectUserDto) {
-    const findOptions: FindManyOptions<ProjectUsers> = {
-      where: { userId: createDto.userId },
-    };
-    const projAssignments = await this.projectUserRepo.find(findOptions);
+// Finds projects assigned to a specific employee
+async findProjectsForEmployee(createDto: CreateProjectUserDto) {
+  const findOptions: FindManyOptions<ProjectUsers> = {
+    where: { userId: createDto.userId },
+  };
+  const projAssignments = await this.projectUserRepo.find(findOptions);
 
-    // Check if the user is assigned to a project during the specified time period
-    for (const assignment of projAssignments) {
-      if (
-        (assignment.startDate <= createDto.startDate &&
-        assignment.endDate >= createDto.startDate) ||
-        (createDto.startDate <= assignment.startDate &&
-        createDto.endDate >= assignment.startDate)
-      ) {
-        return assignment;
-      }
+  // Check if the user is assigned to a project during the specified time period
+  for (const assignment of projAssignments) {
+    if (
+      (assignment.startDate <= createDto.startDate &&
+      assignment.endDate >= createDto.startDate) ||
+      (createDto.startDate <= assignment.startDate &&
+      createDto.endDate >= assignment.startDate)
+    ) {
+      return assignment; // This should be throwing an exception instead
     }
-    return new ConflictException('User is not assigned to a project during this time period');
   }
+  return new ConflictException('User is not assigned to a project during this time period'); // This seems misplaced
+}
+
 
   // Finds a specific ProjectUser by ID
   async findProjectUserById(projUserId: string): Promise<ProjectUsers> {
