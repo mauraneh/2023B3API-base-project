@@ -85,7 +85,7 @@ export class ProjectsController {
         return await this.projectService.findAll(req);
       } else if (req.user.role === 'Employee') {
         // Employees see only projects they are involved in
-        const employeeProjects = await this.projectUserService.getProjectsForSpecificUser(req.user.sub);
+        const employeeProjects = await this.projectUserService.getProjectsForSpecificUser(req.user.sub, req.user.role);
         if (employeeProjects.length === 0) {
           // If no projects found for the employee, return an empty array with 200 status
           return [];

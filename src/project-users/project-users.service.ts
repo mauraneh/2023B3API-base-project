@@ -78,7 +78,7 @@ async findProjectsForEmployee(createDto: CreateProjectUsersDto) {
       (createDto.startDate <= assignment.startDate &&
       createDto.endDate >= assignment.startDate)
     ) {
-      return assignment; // This should be throwing an exception instead
+      return assignment;
     }
   }
   return new ConflictException('User is not assigned to a project during this time period'); // This seems misplaced
